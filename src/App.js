@@ -1,23 +1,39 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
 import './App.css';
+import { parse_file } from './rleParser';
 
 function App() {
-  return (
+  const [jsonData, setJsonData] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleFileUpload = async(event) => {
+    const file = event.target.files[0];
+
+    if(!file) return;
+
+    try{
+      setError(null);
+      const data = await parse_file(file);
+      setJsonData(data);
+    } catch (err){
+      setError(`Error parsing file: ${err.message}`);
+      setJsonData(null);
+    }
+  };
+
+
+  return(
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <h1 className="greeting">RLE JSON Parser</h1>
+      <input 
+      type="file" 
+      accept=".json,.txt" 
+      onChange={handleFileUpload}
+      />
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {jsonData && (
+        <pre>{JSON.stringify(jsonData, null, 2)}</pre>
+      )}
     </div>
   );
 }
