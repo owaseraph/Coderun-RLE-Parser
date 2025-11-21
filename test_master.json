@@ -1,0 +1,13 @@
+{
+  "test_name": "Final RLE Stress Test",
+  "cases": {
+    "standard_letters": "AAAAA",
+    "short_letters": "BB",
+    "numeric_run": "33333",
+    "literal_number": "12345",
+    "ambiguity_check_1": "Unit 4B",
+    "ambiguity_check_2": "5A",
+    "escape_character": "User ~ Name",
+    "complex_mix": "AA33~4B"
+  }
+}
