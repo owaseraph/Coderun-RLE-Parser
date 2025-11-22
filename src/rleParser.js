@@ -1,9 +1,5 @@
 // rleParser.js
 
-
-const isLetter = (char) => /[a-zA-Z]/.test(char);
-const isDigit = (char) => /\d/.test(char);
-
 const ESCAPE_CHAR = '~'; 
 
 
@@ -71,8 +67,17 @@ function encodeRLE(str) {
     }
 
     const originalLength = chars.length;
-    const compressedLength = Array.from(compressed).length; // important: emoji-safe!
-    const compressionRatio = compressedLength / originalLength;
+    let compressedLength = Array.from(compressed).length; //emoji-safe or UTF-16 safe
+    let compressionRatio = compressedLength / originalLength;
+
+    if(compressionRatio >= 1) {
+        console.warn("Warning: Compression ratio is >= 1, compression ineffective.");
+        compressed = str;
+        compressedLength = compressed.length;
+        compressionRatio = 1;
+    }
+
+    compressionRatio = compressionRatio.toFixed(2)*100 + "%";
 
     return {
         compressed,
