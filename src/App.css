@@ -486,26 +486,45 @@ body {
   padding: 0 10px;
 }
 
-.execution-stats{
-  font-family:'Courier New', monospace;
-  color: rbga(255,255,255,0.5);
-  font-size: 0.85rem;
-  margin-top: 8px;
-  text-align: right;
+.meta-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Align to right */
   width: 100%;
+  margin-top: 10px;
   padding-right: 5px;
+  gap: 5px;
 }
 
-.execution-stats strong{
+.execution-stats {
+  font-family: 'Courier New', monospace;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+.execution-stats strong { color: #4af626; }
+
+.file-stats {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255,255,255,0.05);
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.stat-label { color: rgba(255,255,255,0.4); margin-right: 5px; }
+.stat-val { font-weight: bold; color: #fff; }
+.stat-divider { color: rgba(255,255,255,0.2); }
+
+.blink {
+  animation: blinker 1.5s linear infinite;
+  margin-right: 5px;
   color: #4af626;
 }
+@keyframes blinker { 50% { opacity: 0; } }
 
-.blink{
-  animation: blinker 1.5s liner infinite;
-  margin-right: 5px;
-  color: #4af626
-}
 
-@keyframes blinker{
-  50% { opacity: 0; }
-}

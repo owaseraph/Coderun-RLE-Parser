@@ -1,96 +1,142 @@
-// rleParser.js
+import GraphemeSplitter from 'grapheme-splitter';
 
-
-const isLetter = (char) => /[a-zA-Z]/.test(char);
 const isDigit = (char) => /\d/.test(char);
 
 const ESCAPE_CHAR = '~'; 
 
+const splitter = new GraphemeSplitter();
 
-function decodeRLE(encodedStr) {
-    const chars = Array.from(encodedStr); // full characters array (emojis OK)
-    let decodedStr = '';
-    let i = 0;
 
-    while (i < chars.length) {
-        if (chars[i] === ESCAPE_CHAR) {
-            let numberStart = i + 1;
+const getGraphemes = (str) => {
+  return splitter.splitGraphemes(str);
+};
 
-            //I have to manually check since i dont have indexOf
-            let numberEnd = numberStart;
-            while (numberEnd < chars.length && chars[numberEnd] !== ':') {
-                numberEnd++;
+
+export function decodeRLE(encodedData) {
+  
+  const chars = getGraphemes(encodedData);
+  let decoded = '';
+  let i = 0;
+
+  while (i < chars.length) {
+    const char = chars[i];
+
+    if (char === ESCAPE_CHAR) {
+      if (i + 1 < chars.length && chars[i+1] === ESCAPE_CHAR) {
+         decoded += ESCAPE_CHAR;
+         i += 2;
+         continue;
+      }
+
+      let tempI = i + 1;
+      let numStr = '';
+      
+      
+      while (tempI < chars.length && isDigit(chars[tempI])) {
+        numStr += chars[tempI];
+        tempI++;
+      }
+
+      if (numStr.length > 0) {
+        
+        if (tempI < chars.length && chars[tempI] === ':') {
+            const count = parseInt(numStr, 10);
+            const digitToRepeat = chars[tempI + 1]; 
+            
+            if (digitToRepeat) {
+                decoded += digitToRepeat.repeat(count);
+                i = tempI + 2; 
+            } else {
+                i = tempI; 
             }
-
-            if (numberEnd >= chars.length) {
-                throw new Error("Invalid format: missing ':' after '~number'");
-            }
-
-            const number = parseInt(chars.slice(numberStart, numberEnd).join(''), 10);
-
-            if (isNaN(number) || number < 1) {
-                throw new Error("Invalid format: number should be a positive integer");
-            }
-
-            const char = chars[numberEnd + 1];
-
-            if (!char) throw new Error("Invalid format: missing character after ':'");
-
-            decodedStr += char.repeat(number);
-
-            i = numberEnd + 2;
         } else {
-            throw new Error("Invalid format: string must start with '~'");
+            decoded += numStr;
+            i = tempI; 
         }
+      } else {
+         i++; 
+      }
+    } 
+    else if (isDigit(char)) {
+      let numStr = '';
+      let tempI = i;
+      
+      while (tempI < chars.length && isDigit(chars[tempI])) {
+        numStr += chars[tempI];
+        tempI++;
+      }
+      
+      if (tempI < chars.length) {
+         const count = parseInt(numStr, 10);
+         const charToRepeat = chars[tempI]; 
+         decoded += charToRepeat.repeat(count);
+         i = tempI + 1;
+      } else {
+         decoded += numStr;
+         i = tempI;
+      }
+    } 
+    else {
+      decoded += char;
+      i++;
     }
-
-    return decodedStr;
+  }
+  return decoded;
 }
 
+ 
+export function encodeRLE(inputData) {
+  const chars = getGraphemes(inputData);
+  let encoded = '';
+  let i = 0;
 
-function encodeRLE(str) {
-    const chars = Array.from(str);     //safe emojis (hate emojis)
-    let compressed = '';
-    let i = 0;
+  while (i < chars.length) {
+    const char = chars[i];
 
-    while (i < chars.length) {
-        const currentChar = chars[i];
-        let count = 1;
-
-        if(currentChar === '') {
-            throw new Error("Empty character encountered, invalid input string");
-        }
-        while (i + count < chars.length && chars[i + count] === currentChar) {
-            count++;
-        }
-
-
-        compressed += `~${count}:${currentChar}`;
-
-        i += count;
+    if (isDigit(char)) {
+      let count = 1;
+      while (i + 1 < chars.length && chars[i + 1] === char) {
+        count++;
+        i++;
+      }
+      
+      if (count > 1) {
+        encoded += `${ESCAPE_CHAR}${count}:${char}`;
+      } else {
+        encoded += `${ESCAPE_CHAR}${char}`;
+      }
+      i++;
     }
-
-    const originalLength = chars.length;
-    const compressedLength = Array.from(compressed).length; // important: emoji-safe!
-    const compressionRatio = compressedLength / originalLength;
-
-    return {
-        compressed,
-        compressedLength,
-        originalLength,
-        compressionRatio
-    };
+    else if (char === ESCAPE_CHAR) {
+      encoded += ESCAPE_CHAR + ESCAPE_CHAR;
+      i++;
+    }
+    else {
+      let count = 1;
+      
+      while (i + 1 < chars.length && chars[i + 1] === char) {
+        count++;
+        i++;
+      }
+      
+      if (count > 1) { 
+        encoded += `${count}${char}`;
+      } else {
+        encoded += char;
+      }
+      i++;
+    }
+  }
+  return encoded;
 }
-
 
 export async function parse_file(file) {
   const text = await file.text();
   const decoded = decodeRLE(text);
-  console.log("Decoded content:", decoded);
   try {
-    return {"string": decoded, "length": decoded.length};
+    return JSON.parse(decoded);
   } catch (e) {
-    throw new Error("Decoded content is not valid JSON");
+    return decoded;
   }
 }
 

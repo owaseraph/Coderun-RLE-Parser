@@ -1,20 +1,23 @@
 import React, { useState, useRef, useMemo } from 'react';
 import './App.css';
-import { parse_file, compress_file } from './rleParser';
+import { decodeRLE, encodeRLE } from './rleParser';
 
 function App() {
-  const [data, setData] = useState(null); //processed data state
-  const [inputText, setInputText] = useState(''); //text input state
-  const [error, setError] = useState(null);//error state
-  const [mode, setMode] = useState('decode'); // 'decode' | 'encode'
-  const [exectime, setExectime] = useState(null);
+  const [data, setData] = useState(null);
+  const [inputText, setInputText] = useState('');
+  const [error, setError] = useState(null);
+  const [mode, setMode] = useState('decode');
   
+  
+  const [execTime, setExecTime] = useState(null); 
+  const [stats, setStats] = useState(null); 
+
   const glowRef = useRef(null);
   const target = useRef({x: window.innerWidth/2, y: window.innerHeight/2});
   const pos = useRef({x: window.innerWidth/2,  y: window.innerHeight/2});
   const rafRef = useRef(null);
 
-  //particle logic
+  
   const particles = useMemo(() => {
     const items = [];
     for(let i=0; i<10; i++) {
@@ -31,58 +34,82 @@ function App() {
     }
     return items;
   }, []);
-  //process file object based on mode
+
+
   const processFileObj = async (fileObj) => {
     setError(null);
     setData(null);
-    setExectime(null);
-
+    setExecTime(null);
+    setStats(null);
 
     try {
       const startTime = performance.now();
-      let result;
+      
+      
+      const text = await fileObj.text();
+      const inputLen = text.length;
+
+      let resultData;
+      let outputLen = 0;
+      let ratio = 0;
+
       if (mode === 'decode') {
-        result = await parse_file(fileObj);
+        const decoded = decodeRLE(text);
+        outputLen = decoded.length;
+        
+        try {
+          resultData = JSON.parse(decoded);
+        } catch (e) {
+          resultData = decoded;
+        }
+        ratio = outputLen > 0 ? (inputLen / outputLen) * 100 : 0;
+
       } else {
-        result = await compress_file(fileObj);
+        const encoded = encodeRLE(text);
+        outputLen = encoded.length;
+        resultData = encoded;
+
+        
+        ratio = inputLen > 0 ? (outputLen / inputLen) * 100 : 0;
       }
+
       const endTime = performance.now();
-      setExectime((endTime - startTime).toFixed(3));
-      setData(result);
+      
+      setExecTime((endTime - startTime).toFixed(3));
+      setStats({
+        original: inputLen,
+        result: outputLen,
+        ratio: ratio.toFixed(2)
+      });
+      
+      setData(resultData);
+
     } catch (err) {
       setError(`Error during ${mode}: ${err.message}`);
       setData(null);
     }
   };
 
-  //handle file upload
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
-    //if user uploads a file, clear text input
     setInputText(''); 
     await processFileObj(file);
     event.target.value = ''; 
   };
 
-  //handle text input submission
- const handleTextSubmit = async () => {
+  const handleTextSubmit = async () => {
     if (!inputText.trim()) {
         setError("Please enter some text to process.");
         return;
     }
     
-    //check for json or txt
     const text = inputText.trim();
     const isJson = text.startsWith('{') || text.startsWith('[');
-
-    //create json or txt
     const mimeType = isJson ? 'application/json' : 'text/plain';
     const extension = isJson ? '.json' : '.txt';
     const fileName = `manual_input${extension}`;
 
-    //create file object
     const blob = new Blob([inputText], { type: mimeType });
     const file = new File([blob], fileName, { type: mimeType });
     
@@ -108,7 +135,6 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  //animation effects
   React.useEffect(()=>{
     const el = document.querySelector('.bg-anim');
     if(!el) return;
@@ -169,23 +195,21 @@ function App() {
       <div className="App card">
         <h1 className="greeting neon">RLE {mode === 'decode' ? 'Decoder' : 'Encoder'}</h1>
         
-        {/*mode switcher*/}
         <div className="mode-switch">
           <button 
             className={mode === 'decode' ? 'active' : ''} 
-            onClick={() => {setMode('decode'); setData(null); setError(null); setInputText('');}}
+            onClick={() => {setMode('decode'); setData(null); setError(null); setInputText(''); setExecTime(null); setStats(null);}}
           >
             Decode
           </button>
           <button 
             className={mode === 'encode' ? 'active' : ''} 
-            onClick={() => {setMode('encode'); setData(null); setError(null); setInputText('');}}
+            onClick={() => {setMode('encode'); setData(null); setError(null); setInputText(''); setExecTime(null); setStats(null);}}
           >
             Encode
           </button>
         </div>
 
-        {/*input textarea*/}
         <div className="input-section">
             <textarea 
                 className="custom-textarea input-area"
@@ -200,7 +224,6 @@ function App() {
         
         <div className="divider"><span>OR</span></div>
 
-        {/*file upload zone*/}
         <label className="drop-zone">
           <input
             type="file"
@@ -217,7 +240,6 @@ function App() {
 
         {error && <p className="error">{error}</p>}
 
-        {/*output textareaU*/}
         {data && (
           <div className="fade-in">
             <div className="terminal-window">
@@ -228,18 +250,44 @@ function App() {
                 <span style={{marginLeft: '10px', fontSize: '0.8rem', opacity: 0.7}}>Output</span>
               </div>
               
-              {/*output area*/}
               <textarea 
                 className="custom-textarea output-area"
                 readOnly
                 value={typeof data === 'object' ? JSON.stringify(data, null, 2) : data}
               />
             </div>
-            {exectime&& (
-              <div className="execution-stats">
-                <span className="blink">&gt;</span> Execution time: <strong>{exectime}ms</strong>
-              </div>
-            )}
+            
+            <div className="meta-container">
+              {/*execution time*/}
+              {execTime && (
+                <div className="execution-stats">
+                  <span className="blink">&gt;</span> Time: <strong>{execTime}ms</strong>
+                </div>
+              )}
+
+              {/*filestats*/}
+              {stats && (
+                <div className="file-stats">
+                  <div className="stat-item">
+                    <span className="stat-label">Original:</span>
+                    <span className="stat-val">{stats.original} chars</span>
+                  </div>
+                  <div className="stat-divider">|</div>
+                  <div className="stat-item">
+                    <span className="stat-label">Result:</span>
+                    <span className="stat-val">{stats.result} chars</span>
+                  </div>
+                  <div className="stat-divider">|</div>
+                  <div className="stat-item">
+                    <span className="stat-label">Ratio:</span>
+                    <span className="stat-val" style={{color: stats.ratio < 100 ? '#4af626' : '#ffcc00'}}>
+                      {stats.ratio}%
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <div style={{ display:'flex', gap:15, marginTop:20, justifyContent:'center' }}>
               <button onClick={handleCopy} className="file-cta">Copy Result</button>
               <button onClick={handleDownload} className="file-cta">Download</button>
