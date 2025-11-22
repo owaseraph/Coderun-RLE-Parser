@@ -423,3 +423,89 @@ body {
   .mouse-glow { width: 250px; height: 250px; }
   .drop-zone { padding: 30px 15px; }
 }
+
+.input-section{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.custom-textarea{
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,256,256,0.1);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-family: 'Orbitron', sans-serif;
+  padding: 15px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  box-sizing: border-box;
+}
+
+.custom-textarea:focus{
+  border-color: rgba(100,100,255,0.5);
+  box-shadow: 0 0 15px rgba(100, 100, 255, 0.1);
+}
+
+
+.input-area{
+  min-height: 100px;
+}
+
+.output-area{
+  min-height: 200px;
+  background: transparent;
+  border: none;
+  color: #4af626;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.divider{
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 15px 0;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.divider::before, .divider::after{
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.divider span{
+  padding: 0 10px;
+}
+
+.execution-stats{
+  font-family:'Courier New', monospace;
+  color: rbga(255,255,255,0.5);
+  font-size: 0.85rem;
+  margin-top: 8px;
+  text-align: right;
+  width: 100%;
+  padding-right: 5px;
+}
+
+.execution-stats strong{
+  color: #4af626;
+}
+
+.blink{
+  animation: blinker 1.5s liner infinite;
+  margin-right: 5px;
+  color: #4af626
+}
+
+@keyframes blinker{
+  50% { opacity: 0; }
+}

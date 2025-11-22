@@ -6,127 +6,89 @@ const isDigit = (char) => /\d/.test(char);
 
 const ESCAPE_CHAR = '~'; 
 
-//smart decoder
-export function decodeRLE(encodedData) {
-  let decoded = '';
-  let i = 0;
 
-  while (i < encodedData.length) {
-    const char = encodedData[i];
+function decodeRLE(encodedStr) {
+    const chars = Array.from(encodedStr); // full characters array (emojis OK)
+    let decodedStr = '';
+    let i = 0;
 
-    
-    if (char === ESCAPE_CHAR) {
-      let tempI = i + 1;
-      let numStr = '';
-      
-      while (tempI < encodedData.length && isDigit(encodedData[tempI])) {
-        numStr += encodedData[tempI];
-        tempI++;
-      }
+    while (i < chars.length) {
+        if (chars[i] === ESCAPE_CHAR) {
+            let numberStart = i + 1;
 
-      
-      if (numStr.length > 0 && encodedData[tempI] === ':') {
-        const count = parseInt(numStr, 10);
-        const digitToRepeat = encodedData[tempI + 1]; 
-        
-        if (digitToRepeat) {
-           decoded += digitToRepeat.repeat(count);
-           i = tempI + 2; 
+            //I have to manually check since i dont have indexOf
+            let numberEnd = numberStart;
+            while (numberEnd < chars.length && chars[numberEnd] !== ':') {
+                numberEnd++;
+            }
+
+            if (numberEnd >= chars.length) {
+                throw new Error("Invalid format: missing ':' after '~number'");
+            }
+
+            const number = parseInt(chars.slice(numberStart, numberEnd).join(''), 10);
+
+            if (isNaN(number) || number < 1) {
+                throw new Error("Invalid format: number should be a positive integer");
+            }
+
+            const char = chars[numberEnd + 1];
+
+            if (!char) throw new Error("Invalid format: missing character after ':'");
+
+            decodedStr += char.repeat(number);
+
+            i = numberEnd + 2;
         } else {
-           i++; 
+            throw new Error("Invalid format: string must start with '~'");
         }
-      } 
-      else {
-        i++; 
-        if (i < encodedData.length) {
-          decoded += encodedData[i]; 
-          i++;
-        }
-      }
     }
-    else if (isDigit(char)) {
-      let numStr = '';
-      let tempI = i;
-      while (tempI < encodedData.length && isDigit(encodedData[tempI])) {
-        numStr += encodedData[tempI];
-        tempI++;
-      }
-      if (tempI < encodedData.length && isLetter(encodedData[tempI])) {
-        const count = parseInt(numStr, 10);
-        const charToRepeat = encodedData[tempI];
-        decoded += charToRepeat.repeat(count);
-        i = tempI + 1;
-      } else {
-        decoded += char;
-        i++;
-      }
-    }
-    else {
-      decoded += char;
-      i++;
-    }
-  }
-  return decoded;
+
+    return decodedStr;
 }
 
-export function encodeRLE(inputData) {
-  let encoded = '';
-  let i = 0;
 
-  while (i < inputData.length) {
-    
-    if (isDigit(inputData[i])) {
-      let char = inputData[i];
-      let count = 1;
-      
-      while (i + 1 < inputData.length && inputData[i + 1] === char) {
-        count++;
-        i++;
-      }
-      if (count > 1) {
-        encoded += `${ESCAPE_CHAR}${count}:${char}`;
-      } 
-      else {
-        if (i + 1 < inputData.length && isLetter(inputData[i + 1])) {
-           encoded += `${ESCAPE_CHAR}${char}`;
-        } else {
-           encoded += char;
+function encodeRLE(str) {
+    const chars = Array.from(str);     //safe emojis (hate emojis)
+    let compressed = '';
+    let i = 0;
+
+    while (i < chars.length) {
+        const currentChar = chars[i];
+        let count = 1;
+
+        if(currentChar === '') {
+            throw new Error("Empty character encountered, invalid input string");
         }
-      }
-      i++;
+        while (i + count < chars.length && chars[i + count] === currentChar) {
+            count++;
+        }
+
+
+        compressed += `~${count}:${currentChar}`;
+
+        i += count;
     }
-    else if (inputData[i] === ESCAPE_CHAR) {
-      encoded += ESCAPE_CHAR + ESCAPE_CHAR;
-      i++;
-    }
-    else if (isLetter(inputData[i])) {
-       let char = inputData[i];
-       let count = 1;
-       while (i + 1 < inputData.length && inputData[i + 1] === char) {
-         count++;
-         i++;
-       }
-       
-       if (count > 1) { 
-         encoded += `${count}${char}`;
-       } else {
-         encoded += char;
-       }
-       i++;
-    }
-    else {
-      encoded += inputData[i];
-      i++;
-    }
-  }
-  return encoded;
+
+    const originalLength = chars.length;
+    const compressedLength = Array.from(compressed).length; // important: emoji-safe!
+    const compressionRatio = compressedLength / originalLength;
+
+    return {
+        compressed,
+        compressedLength,
+        originalLength,
+        compressionRatio
+    };
 }
+
 
 export async function parse_file(file) {
   const text = await file.text();
   const decoded = decodeRLE(text);
+  console.log("Decoded content:", decoded);
   try {
-    return JSON.parse(decoded);
+    return {"string": decoded, "length": decoded.length};
   } catch (e) {
     throw new Error("Decoded content is not valid JSON");
   }
