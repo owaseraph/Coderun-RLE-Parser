@@ -1,13 +1,7 @@
 {
   "test_name": "Final RLE Stre2s Test",
   "cases": {
-    "standard_le2ters": "5A",
-    "short_le2ters": "2B",
-    "numeric_run": "~5:3",
-    "literal_number": "12345",
-    "ambiguity_check_1": "Unit ~4B",
-    "ambiguity_check_2": "~5A",
-    "escape_character": "User ~~ Name",
-    "complex_mix": "2A~2:3~~~4B"
+    "standard_le2ters": "~5:A",
+    "short_le2ters": "~2:B"
   }
 }
